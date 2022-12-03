@@ -7,12 +7,6 @@
 
 ;;; Puzzle 1
 
-(defun read-rucksacks ()
-  (with-open-input (stream "day-3")
-    (loop for line = (read-line stream nil nil)
-          while line
-          collect line)))
-
 (defun item-priority (item)
   "Items are characters in the range a-z or A-Z.
 
@@ -34,18 +28,20 @@ The a-z range has priorities 1-26, and A-Z has priorities 27-52."
 (defun sum-priorities ()
   "Find the item type that appears in both compartments of each rucksack. What
 is the sum of the priorities of those item types?"
-  (reduce #'+ (read-rucksacks) :key #'common-item-priority))
+  (with-file-lines (rucksacks "day-3")
+    (reduce #'+ rucksacks :key #'common-item-priority)))
 
 ;;; Puzzle 2
 
-(defun badge-item (rucksacks)
-  (loop for item across (first rucksacks)
-        when (and (find item (second rucksacks) :test #'char=)
-                  (find item (third rucksacks) :test #'char=))
+(defun badge-item (rucksack1 rucksack2 rucksack3)
+  (loop for item across rucksack1
+        when (and (find item rucksack2 :test #'char=)
+                  (find item rucksack3 :test #'char=))
         do (return item)))
 
 (defun sum-badge-priorities ()
   "Find the item type that corresponds to the badges of each three-Elf
 group. What is the sum of the priorities of those item types?"
-  (loop for group = (read-rucksacks) then (cdddr group) while group
-        summing (item-priority (badge-item group)))) 
+  (with-file-lines (rucksacks "day-3")
+    (loop for (r1 r2 r3) on rucksacks by #'cdddr
+          summing (item-priority (badge-item r1 r2 r3)))))
