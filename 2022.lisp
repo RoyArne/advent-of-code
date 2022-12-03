@@ -19,5 +19,16 @@
                     :external-format :utf-8)
      ,@body))
 
+(defun read-file-lines (stream)
+  (loop for line = (read-line stream nil nil)
+        while line
+        collect line))
+
+(defmacro with-file-lines ((lines filename) &body body)
+  (let ((stream (gensym)))
+    `(with-open-input (,stream ,filename)
+       (let ((,lines (read-file-lines ,stream)))
+         ,@body))))
+
 (defun trim-whitespace (line)
   (string-trim '(#\Tab #\Space #\Return #\Newline) line))
