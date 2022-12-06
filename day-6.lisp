@@ -5,14 +5,14 @@
   (loop for i from end downto start
         do (loop for j from (1- i) downto start
                  when (char= (char string i) (char string j))
-                 do (return-from match-index i))))
+                 do (return-from match-index j))))
 
 (defun index-of-first-n-distinct-chars (string n)
   (loop with i = 0
         with j = (1- n)
         for match = (match-index string i (+ i j))
         do (if match
-               (incf i)
+               (setf i (1+ match))
                (return i))))
   
 (defun first-start-of-packet-marker ()
