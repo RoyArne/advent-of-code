@@ -1,11 +1,25 @@
 
-(cl:in-package #:advent-of-code)
+(cl:defpackage #:aoc-2022-day-2
+  (:use #:common-lisp
+        #:advent-of-code)
+  (:export #:score-according-to-strategy-guide
+           #:score-according-to-required-outcomes)
+  (:documentation
+   "Solutions for the Advent of Code 2022 day 2 puzzles found at
+https://adventofcode.com/2022/day/2
 
-;;; Day 2 puzzles
-;;;
-;;; https://adventofcode.com/2022/day/2
-;;;
-;;; Part 1
+Part 1 is solved by
+  score-according-to-strategy-guide
+and part 2 by
+  score-according-to-required-outcomes.
+
+Both look for a file named day-2 in the *INPUT-DIRECTORY*.
+
+See also
+https://www.reddit.com/r/adventofcode/comments/zac2v2/2022_day_2_solutions/"))
+
+(cl:in-package #:aoc-2022-day-2)
+
 (defun lookup-opponents-shape (char)
   (ecase char
     (#\A 'rock)
@@ -77,7 +91,6 @@ strategy guide?"
 
 
 
-;;; Part 2
 (defun required-outcome (char)
   (ecase char
     (#\X 'lost)
