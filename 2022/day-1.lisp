@@ -1,10 +1,25 @@
 
-(cl:in-package #:advent-of-code)
+(cl:defpackage #:aoc-2022-day-1
+  (:use #:common-lisp
+        #:advent-of-code)
+  (:export #:calories-carried-by-elf-carrying-most
+           #:calories-carried-by-top-three-elves-carrying-most)
+  (:documentation
+   "Solutions for the Advent of Code 2022 day 1 puzzles found at
+https://adventofcode.com/2022/day/1
 
-;;; Day 1 puzzles
-;;;
-;;; https://adventofcode.com/2022/day/1
-;;;
+Part 1 is solved by
+  calories-carried-by-elf-carrying-most
+and part 2 by
+  calories-carried-by-top-three-elves-carrying-most.
+
+Both look for a file named day-1 in the *INPUT-DIRECTORY*.
+
+See also
+https://www.reddit.com/r/adventofcode/comments/z9ezjb/2022_day_1_solutions/"))
+
+(cl:in-package #:aoc-2022-day-1)
+
 (defun read-bag-contents (stream)
   "Read text lines from STREAM until end of file or an empty line is
 found.
@@ -36,4 +51,4 @@ Elf carrying?"
   "Find the top three Elves carrying the most Calories. How many Calories are
 those Elves carrying in total?"
   (with-open-input (stream "day-1")
-    (reduce #'+ (subseq (sort-total-calories (read-bags stream)) 0 3))))
+    (reduce #'+ (sort-total-calories (read-bags stream)) :start 0 :end 3)))
