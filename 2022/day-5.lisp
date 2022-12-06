@@ -1,5 +1,26 @@
 
-(cl:in-package #:advent-of-code)
+(cl:defpackage #:aoc-2022-day-5
+  (:use #:common-lisp
+        #:advent-of-code)
+  (:export #:rearrange-crates
+           #:rearrange-crates-without-reordering)
+  (:documentation
+   "Solutions for the Advent of Code 2022 day 5 puzzles found at
+https://adventofcode.com/2022/day/5
+
+Part 1 is solved by
+  rearrange-crates
+and part 2 by
+  rearrange-crates-without-reordering.
+
+Both look for a file named day-5 in the *INPUT-DIRECTORY*.
+
+The solutions depend on the cl-ppcre library: \(ql:quickload \"cl-ppcre\"\)
+
+See also
+https://www.reddit.com/r/adventofcode/comments/zcxid5/2022_day_5_solutions/"))
+
+(cl:in-package #:aoc-2022-day-5)
 
 (defun read-stacks (stream)
   (loop for line = (read-line stream nil nil)
