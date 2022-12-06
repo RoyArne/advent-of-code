@@ -1,5 +1,26 @@
 
-(cl:in-package #:advent-of-code)
+(cl:defpackage #:aoc-2022-day-4
+  (:use #:common-lisp
+        #:advent-of-code)
+  (:export #:count-fully-contained-pairs
+           #:count-overlapping-pairs)
+  (:documentation
+   "Solutions for the Advent of Code 2022 day 4 puzzles found at
+https://adventofcode.com/2022/day/4
+
+Part 1 is solved by
+  count-fully-contained-pairs
+and part 2 by
+  count-overlapping-pairs.
+
+Both look for a file named day-4 in the *INPUT-DIRECTORY*.
+
+The solutions depend on the cl-ppcre library: \(ql:quickload \"cl-ppcre\"\)
+
+See also
+https://www.reddit.com/r/adventofcode/comments/zc0zta/2022_day_4_solutions/"))
+
+(cl:in-package #:aoc-2022-day-4)
 
 (defun read-assignment-pairs ()
   (with-open-input (stream "day-4")
