@@ -1,5 +1,24 @@
 
-(cl:in-package #:advent-of-code)
+(cl:defpackage #:aoc-2022-day-6
+  (:use #:common-lisp
+        #:advent-of-code)
+  (:export #:first-start-of-packet-marker
+           #:first-start-of-message-marker)
+  (:documentation
+   "Solutions for the Advent of Code 2022 day 6 puzzles found at
+https://adventofcode.com/2022/day/6
+
+Part 1 is solved by
+  first-start-of-packet-marker
+and part 2 by
+  first-start-of-message-marker.
+
+Both look for a file named day-6 in the *INPUT-DIRECTORY*.
+
+See also
+https://www.reddit.com/r/adventofcode/comments/zdw0u6/2022_day_6_solutions/"))
+
+(cl:in-package #:aoc-2022-day-6)
 
 (defun match-index (string start end)
   (loop for i from end downto start
