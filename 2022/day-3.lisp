@@ -1,5 +1,24 @@
 
-(cl:in-package #:advent-of-code)
+(cl:defpackage #:aoc-2022-day-3
+  (:use #:common-lisp
+        #:advent-of-code)
+  (:export #:sum-priorities
+           #:sum-badge-priorities)
+  (:documentation
+   "Solutions for the Advent of Code 2022 day 3 puzzles found at
+https://adventofcode.com/2022/day/3
+
+Part 1 is solved by
+  sum-priorities
+and part 2 by
+  sum-badge-priorities.
+
+Both look for a file named day-3 in the *INPUT-DIRECTORY*.
+
+See also
+https://www.reddit.com/r/adventofcode/comments/zb865p/2022_day_3_solutions/"))
+
+(cl:in-package #:aoc-2022-day-3)
 
 ;;; Day 3
 ;;;
