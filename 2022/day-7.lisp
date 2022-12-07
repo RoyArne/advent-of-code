@@ -39,9 +39,7 @@ https://www.reddit.com/r/adventofcode/comments/zesk40/2022_day_7_solutions/"))
 Returns a list \(name <arguments>\) or NIL at end of file."
   (when (peek-char nil stream nil)
     (ecase (read-char stream)
-      (#\$ (ecase (let ((*package* (find-package "AOC-2022-DAY-7"))
-                        (*read-eval* nil))
-                    (read stream))
+      (#\$ (ecase (read stream)
              (cd (list 'cd (read-line stream nil nil)))
              (ls (list 'ls)))))))
 
@@ -50,22 +48,22 @@ Returns a list \(name <arguments>\) or NIL at end of file."
   (loop for c = (peek-char nil stream nil)
         while c
         until (char= #\$ c)
-        do (let ((value (let ((*package* (find-package "AOC-2022-DAY-7"))
-                              (*read-eval* nil))
-                          (read stream))))
+        do (let ((value (read stream)))
              (add-listing directory (read-line stream) value))))
 
 (defun read-terminal-output (stream)
-  (loop with root = (make-root)
-        with path = (list root)
-        for command = (read-command stream)
-        while command
-        do (ecase (first command)
-             (ls (read-listing stream (first path)))
-             (cd (if (string= ".." (second command))
-                     (pop path)
-                     (push (gethash (second command) (first path)) path))))
-        finally (return root)))
+  (let ((*package* (find-package "AOC-2022-DAY-7"))
+        (*read-eval* nil)
+        (root (make-root)))
+    (loop with path = (list root)
+          for command = (read-command stream)
+          while command
+          do (ecase (first command)
+               (ls (read-listing stream (first path)))
+               (cd (if (string= ".." (second command))
+                       (pop path)
+                       (push (gethash (second command) (first path)) path)))))
+    root))
 
 (defun size-of (item max)
   (etypecase item
@@ -130,5 +128,3 @@ Returns a list \(name <arguments>\) or NIL at end of file."
     (let* ((root (read-terminal-output stream))
            (target-size (+ (- (size-of root 0) 70000000) 30000000)))
       (nth-value 1 (find-smallest-directory-matching root target-size)))))
-      
-
