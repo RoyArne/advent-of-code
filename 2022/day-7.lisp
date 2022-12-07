@@ -15,6 +15,8 @@ and part 2 by
 
 Both look for a file named day-7 in the *INPUT-DIRECTORY*.
 
+Requires the split-sequence library: \(ql:quickload \"split-sequence\"\)
+
 See also
 https://www.reddit.com/r/adventofcode/comments/zesk40/2022_day_7_solutions/"))
 
@@ -37,93 +39,93 @@ https://www.reddit.com/r/adventofcode/comments/zesk40/2022_day_7_solutions/"))
 (defun read-command (stream)
   "Read a command from STREAM.
 Returns a list \(name <arguments>\) or NIL at end of file."
-  (when (peek-char nil stream nil)
-    (ecase (read-char stream)
-      (#\$ (ecase (read stream)
-             (cd (list 'cd (read-line stream nil nil)))
-             (ls (list 'ls)))))))
+  (handler-case
+      (ecase (read-char stream)
+        (#\$ (let ((command (split-sequence:split-sequence #\Space (read-line stream)
+                                                           :remove-empty-subseqs t)))
+               (cond
+                 ((string= "ls" (first command))
+                  (list 'ls))
+                 ((string= "cd" (first command))
+                  (if (string= ".." (second command))
+                      (list 'pop)
+                      (list 'push (second command))))
+                 (t
+                  (error "Unknown command ~A." command))))))
+    (end-of-file () nil)))
 
 (defun read-listing (stream directory)
-  "Read a directory listing from stream."
   (loop for c = (peek-char nil stream nil)
-        while c
-        until (char= #\$ c)
-        do (let ((value (read stream)))
-             (add-listing directory (read-line stream) value))))
+        while (and c (char/= #\$ c))
+        do (let ((line (split-sequence:split-sequence #\Space (read-line stream))))
+             (add-listing directory (second line)
+                          (if (string= "dir" (first line))
+                              'dir
+                              (parse-integer (first line)))))))
 
 (defun read-terminal-output (stream)
-  (let ((*package* (find-package "AOC-2022-DAY-7"))
-        (*read-eval* nil)
-        (root (make-root)))
-    (loop with path = (list root)
-          for command = (read-command stream)
-          while command
-          do (ecase (first command)
-               (ls (read-listing stream (first path)))
-               (cd (if (string= ".." (second command))
-                       (pop path)
-                       (push (gethash (second command) (first path)) path)))))
-    root))
+  (loop with root = (make-root)
+        with path = (list root)
+        for command = (read-command stream)
+        while command
+        do (ecase (first command)
+             (ls (read-listing stream (first path)))
+             (pop (pop path))
+             (push (push (gethash (second command) (first path)) path)))
+        finally (return root)))
 
-(defun size-of (item max)
-  (etypecase item
-    (integer
-     (values item 0))
-    (hash-table
-     (loop with dir-total = 0
-           with subdir-total = 0
-           for file being the hash-values in item using (hash-key name)
-           do (multiple-value-bind (file-size running-total)
-                  (size-of file max)
-                (incf dir-total file-size)
-                (incf subdir-total running-total))
-           finally (return (values dir-total
-                                   (+ subdir-total
-                                      (if (<= dir-total max)
-                                          dir-total
-                                          0))))))))
 
 (defun size-of (dir max)
+  "Return two values; the total size of DIR and sum of the total sizes of the
+directories whose total size is less than or equal to MAX."
+  (declare (type hash-table dir)
+           (type fixnum max))
   (loop with dir-total = 0
-        with subdir-total = 0
-        for file being the hash-values in dir using (hash-key name)
-        do (etypecase file
-             (integer
-              (incf dir-total file))
-             (hash-table
-              (multiple-value-bind (file-size running-total)
-                  (size-of file max)
-                (incf dir-total file-size)
-                (incf subdir-total running-total))))
+        with subdir<=max-total = 0
+        for file being the hash-values in dir
+        do (incf dir-total
+                 (etypecase file
+                   (integer file)
+                   (hash-table (multiple-value-bind (size total<=max)
+                                   (size-of file max)
+                                 (incf subdir<=max-total total<=max)
+                                 size))))
         finally (return (values dir-total
-                                (+ subdir-total
+                                (+ subdir<=max-total
                                    (if (<= dir-total max)
                                        dir-total
                                        0))))))
 
 (defun total-size-of-directories-with-a-total-size-of-at-most-100000 ()
+  "Find all of the directories with a total size of at most 100000. What is
+the sum of the total sizes of those directories?"
   (with-open-input (stream "day-7")
     (nth-value 1 (size-of (read-terminal-output stream) 100000))))
 
 
 (defun find-smallest-directory-matching (dir target-size)
+  "Return two values; the total size of DIR and the size of the smallest
+ directory that is greater than or equal to TARGET-SIZE."
+  (declare (type hash-table dir)
+           (type fixnum target-size))
   (loop with dir-total = 0
         with best-match = most-positive-fixnum
-        for file being the hash-values in dir using (hash-key name)
-        do (etypecase file
-             (integer
-              (incf dir-total file))
-             (hash-table
-              (multiple-value-bind (size match)
-                  (find-smallest-directory-matching file target-size)
-                (incf dir-total size)
-                (setf best-match (min best-match match)))))
+        for file being the hash-values in dir
+        do (incf dir-total
+                 (etypecase file
+                   (integer file)
+                   (hash-table (multiple-value-bind (size match)
+                                   (find-smallest-directory-matching file target-size)
+                                 (setf best-match (min best-match match))
+                                 size))))
         finally (return (values dir-total
                                 (if (>= best-match dir-total target-size)
                                     dir-total
                                     best-match)))))
 
 (defun size-of-smallest-directory-to-free ()
+  "Find the smallest directory that, if deleted, would free up enough space on
+the filesystem to run the update. What is the total size of that directory?"
   (with-open-input (stream "day-7")
     (let* ((root (read-terminal-output stream))
            (target-size (+ (- (size-of root 0) 70000000) 30000000)))
