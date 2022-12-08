@@ -2,14 +2,14 @@
 (cl:defpackage #:aoc-2022-day-8
   (:use #:common-lisp
         #:advent-of-code)
-  (:export #:count-visible-trees-from-outside-the-grid
+  (:export #:how-many-trees-are-visible-from-outside-the-grid?
            #:highest-possible-scenic-score)
   (:documentation
    "Solutions for the Advent of Code 2022 day 8 puzzles found at
 https://adventofcode.com/2022/day/8
 
 Part 1 is solved by
-  count-visible-trees-from-outside-the-grid
+  how-many-trees-are-visible-from-outside-the-grid?
 and part 2 by
   highest-possible-scenic-score.
 
@@ -37,71 +37,93 @@ See also"))
 (defun width (array)
   (array-dimension array 1))
 
-(defun outside-visible-p (array h w max-h max-w)
-  "True if the tree at h,w is taller than the tree at max-h,max-w."
-  (> (aref array h w) (aref array max-h max-w)))
+(defun grid-dimension (grid direction)
+  (ecase direction
+    (:vertical (height grid))
+    (:horizontal (width grid))))
+
+(defun grid-major-index (grid direction index offset)
+  "Return a row major index for index + offset in the given direction.
+
+If direction is :vertical then index is used as column and offset as row.
+If direction is :horizontal then index is used as row and offset as column."
+  (ecase direction
+    (:vertical (array-row-major-index grid offset index))
+    (:horizontal (array-row-major-index grid index offset))))
+
+(defun grid-step-by (grid direction)
+  "Return the distance between row major indices in the given direction."
+  (ecase direction
+    (:vertical (width grid))
+    (:horizontal 1)))
+
+(defun scan-line (function grid direction index offset)
+  (loop with start = (grid-major-index grid direction index offset)
+        with end = (grid-major-index grid direction index
+                                     (- (grid-dimension grid direction) 1 offset))
+        with step = (grid-step-by grid direction)
+        for left from start upto end by step
+        for right from end downto start by step
+        do (funcall function left right)))
+
+(defun visible-from-outside-p (grid i max-i)
+  "True if the tree at I is taller than the tree at MAX-I."
+  (> (row-major-aref grid i) (row-major-aref grid max-i)))
+
+(defun mark-as-visible-from-outside (marks index mark)
+  (setf (row-major-aref marks index)
+        (logior (row-major-aref marks index) mark)))
+
+(defun mark-trees-visible-from-outside (grid direction marks start-mark end-mark)
+  (loop for index from 1 below (1- (grid-dimension grid direction))
+        for start-max = (grid-major-index grid direction index 0)
+        for end-max = (grid-major-index grid direction index (1- (grid-dimension grid direction)))
+        do (scan-line #'(lambda (start end)
+                          (when (visible-from-outside-p grid start start-max)
+                            (setf start-max start)
+                            (mark-as-visible-from-outside marks start start-mark))
+                          (when (visible-from-outside-p grid end end-max)
+                            (setf end-max end)
+                            (mark-as-visible-from-outside marks end end-mark)))
+                      grid direction index 1)))
+
 
 (defparameter *left-mark* #b1000)
 (defparameter *right-mark* #b0001)
 (defparameter *top-mark* #b0100)
 (defparameter *bottom-mark* #b0010)
 
-(defun make-mark (array h w mark)
-  (setf (aref array h w) (logior (aref array h w) mark)))
+(defun mark-edges (marks)
+  (scan-line #'(lambda (start end)
+                 (declare (ignore end))
+                 (mark-as-visible-from-outside marks start *top-mark*))
+             marks :horizontal 0 0)
+  (scan-line #'(lambda (start end)
+                 (declare (ignore end))
+                 (mark-as-visible-from-outside marks start *bottom-mark*))
+             marks :horizontal (1- (height marks)) 0)
+  (scan-line #'(lambda (start end)
+                 (declare (ignore end))
+                 (mark-as-visible-from-outside marks start *left-mark*))
+             marks :vertical 0 0)
+  (scan-line #'(lambda (start end)
+                 (declare (ignore end))
+                 (mark-as-visible-from-outside marks start *right-mark*))
+             marks :vertical (1- (width marks)) 0)
+  marks)
 
-(defun mark-edges (array)
-  (assert (= (array-dimension array 0) (array-dimension array 1)))
-  (loop with edge = (1- (height array))
-        for i from 0 upto edge
-        do (progn
-             (make-mark array i 0 *left-mark*)
-             (make-mark array i edge *right-mark*)
-             (make-mark array 0 i *top-mark*)
-             (make-mark array edge i *bottom-mark*)))
-  array)
-
-(defun wscan (h grid marks)
-  (loop with edge = (width grid)
-        with i-max = 0
-        with j-max = (1- edge)
-        for i from 1 below (1- edge)
-        for j from (- edge 2) downto 1
-        do (when (outside-visible-p grid h i h i-max)
-             (setf i-max i)
-             (make-mark marks h i *left-mark*))
-        do (when (outside-visible-p grid h j h j-max)
-             (setf j-max j)
-             (make-mark marks h j *right-mark*))))
-
-(defun hscan (w grid marks)
-  (loop with edge = (height grid)
-        with i-max = 0
-        with j-max = (1- edge)
-        for i from 1 below (1- edge)
-        for j from (- edge 2) downto 1
-        do (when (outside-visible-p grid i w i-max w)
-             (setf i-max i)
-             (make-mark marks i w *left-mark*))
-        do (when (outside-visible-p grid j w j-max w)
-             (setf j-max j)
-             (make-mark marks j w *right-mark*))))
-
-(defun outside-visibility-scan (grid)
+(defun scan-and-mark-visible-trees (grid)
   (let ((marks (mark-edges (make-same-size-array grid))))
-    (loop for h from 1 below (height grid)
-          do (wscan h grid marks))
-    (loop for w from 1 below (width grid)
-          do (hscan w grid marks))
+    (mark-trees-visible-from-outside grid :horizontal marks *left-mark* *right-mark*)
+    (mark-trees-visible-from-outside grid :vertical marks *top-mark* *bottom-mark*)
     marks))
 
-(defun count-visible-trees-from-outside-the-grid ()
-  "how many trees are visible from outside the grid?"
-  (with-open-input (stream "day-8")
-    (loop with marks = (outside-visibility-scan (read-grid stream))
+(defun how-many-trees-are-visible-from-outside-the-grid? (&optional filename)
+  (with-open-input (stream (or filename "day-8"))
+    (loop with marks = (scan-and-mark-visible-trees (read-grid stream))
           for h from 0 below (height marks)
           summing (loop for w from 0 below (width marks)
                         counting (plusp (aref marks h w))))))
-
 
 
 (defun blocking-visibility-p (grid h w test-h test-w)
@@ -135,8 +157,8 @@ See also"))
         (vertical-view grid h w)
       (* l r u d))))
 
-(defun highest-possible-scenic-score ()
-  (with-open-input (stream "day-8")
+(defun highest-possible-scenic-score (&optional filename)
+  (with-open-input (stream (or filename "day-8"))
     (let ((grid (read-grid stream)))
       (loop for h from 0 below (height grid)
             maximizing (loop for w from 0 below (width grid)
