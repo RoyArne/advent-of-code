@@ -34,23 +34,19 @@ See also"))
   ;; move one step towards it.
   ;; If head and tail are not touching and are not in the same row or column,
   ;; then tail must move one step diagonally towards it.
-  (flet ((adjustment (part)  ; part is either realpart or imagpart.
-           (cond
-             ((minusp part) 1)   ; increment the tail part
-             ((plusp part) -1)   ; decrement the tail part
-             (t 0))))            ; tail part is unchanged.
-    (let ((distance (- tail head)))
-      (if (or (> (abs (realpart distance)) 1)
-              (> (abs (imagpart distance)) 1))
-          ;; At this point at least one part of distance is two or higher.
-          ;; and the other part is zero or one.
-          (+ tail
-             ;; This becomes a diagonal move if one part is two and the other
-             ;; is one. Otherwise we move either horizontally or vertically.
-             (complex (adjustment (realpart distance))
-                      (adjustment (imagpart distance))))
-          ;; We return tail unchanged if neither part of distance is two or higher.
-          tail))))
+  (let ((distance (- tail head)))
+    (if (or (> (abs (realpart distance)) 1)
+            (> (abs (imagpart distance)) 1))
+        ;; At this point at least one part of distance is two or higher.
+        ;; and the other part is zero or one.
+        (+ tail
+           ;; This becomes a diagonal move if one part is two and the other
+           ;; is one. Otherwise we move either horizontally or vertically.
+           ;; Using minus signum moves tail towards head.
+           (complex (- (signum (realpart distance)))
+                    (- (signum (imagpart distance)))))
+        ;; We return tail unchanged if neither part of distance is two or higher.
+        tail)))
 
 (defun simulate-motions (motions n)
   (loop with knots = (make-array n :initial-element #c(0 0))
