@@ -34,7 +34,7 @@ See also"))
   ;; move one step towards it.
   ;; If head and tail are not touching and are not in the same row or column,
   ;; then tail must move one step diagonally towards it.
-  (flet ((sign (part)            ; part is either realpart or imagpart.
+  (flet ((adjustment (part)  ; part is either realpart or imagpart.
            (cond
              ((minusp part) 1)   ; increment the tail part
              ((plusp part) -1)   ; decrement the tail part
@@ -47,8 +47,8 @@ See also"))
           (+ tail
              ;; This becomes a diagonal move if one part is two and the other
              ;; is one. Otherwise we move either horizontally or vertically.
-             (complex (* 1 (sign (realpart distance)))
-                      (* 1 (sign (imagpart distance)))))
+             (complex (adjustment (realpart distance))
+                      (adjustment (imagpart distance))))
           ;; We return tail unchanged if neither part of distance is two or higher.
           tail))))
 
