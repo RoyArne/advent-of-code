@@ -49,15 +49,13 @@ See also"))
 (defun simulate-motions (motions n)
   (loop with knots = (make-array n :initial-element #c(0 0))
         with tail-positions = (list (aref knots (1- n)))
-        for motion in motions
-        do (destructuring-bind (direction distance)
-               motion
-             (loop repeat distance
-                   do (incf (aref knots 0) direction)
-                   do (loop for i from 1 below n
-                            do (setf (aref knots i) (adjust-tail (aref knots i)
-                                                                 (aref knots (1- i))))
-                            finally (pushnew (aref knots (1- n)) tail-positions :test #'=))))
+        for (direction distance) in motions
+        do (loop repeat distance
+                 do (incf (aref knots 0) direction)
+                 do (loop for i from 1 below n
+                          do (setf (aref knots i) (adjust-tail (aref knots i)
+                                                               (aref knots (1- i))))
+                          finally (pushnew (aref knots (1- n)) tail-positions :test #'=)))
         finally (return tail-positions)))
 
 (defun how-many-positions-does-the-tail-of-the-rope-visit-at-least-once?
