@@ -5,7 +5,8 @@
            #:with-open-input
            #:read-file-lines
            #:with-file-lines
-           #:trim-whitespace)
+           #:trim-whitespace
+           #:split)
   (:documentation
    "The ADVENT-OF-CODE package exports a few utilities used to solve the
 puzzles at https://adventofcode.com/."))
