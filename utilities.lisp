@@ -38,3 +38,9 @@ FILENAME in the *INPUT-DIRECTORY*."
   "Return LINE with the whitespace characters Tab, Space, Return, and, Newline,
 removed from both ends."
   (string-trim '(#\Tab #\Space #\Return #\Newline) line))
+
+(defun split (char line)
+  (mapcar #'trim-whitespace
+          (split-sequence:split-sequence char line
+                                         :remove-empty-subseqs t
+                                         :test #'char=)))
