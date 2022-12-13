@@ -19,168 +19,190 @@ See also"))
 
 (cl:in-package #:aoc-2022-day-12)
 
+(defun character-position (char lines &optional replacement-char)
+  "Return the position of CHAR in LINES as a complex number. If given,
+replacement-char replaces the character at that position."
+  (loop for line in lines
+        for y = 0 then (1+ y)
+        for x = (position char line :test #'char=)
+        do (when x
+             (when replacement-char
+               (setf (aref line x) replacement-char))
+             (return (complex y x)))))
+
 (defparameter *up* #c(-1 0))
 (defparameter *right* #c(0 1))
 (defparameter *down* #c(1 0))
 (defparameter *left* #c(0 -1))
 
-(defparameter *moves* (list *up* *right* *down* *left*))
-
-(defun find-char (char lines &optional replacement-char)
-  (loop for line in lines
-        for y = 0 then (1+ y)
-        for x = (position char line :test #'char=)
-        when x
-        do (progn
-             (when replacement-char (setf (aref line x) replacement-char))
-             (return (complex y x)))))
-
-(defclass node ()
+(defclass problem ()
   ((start :reader start-position
           :initarg :start
-          :initform #c(0 0)
-          :allocation :class)
+          :initform #c(0 0))
    (end :reader end-position
         :initarg :end
-        :initform #c(0 0)
-        :allocation :class)
-   (this :reader this-position
+        :initform #c(0 0))
+   (actions :reader problem-actions
+            :initform (list *up* *right* *down* *left*)
+            :documentation "A list of relative positions.")
+   (heightmap :reader heightmap
+              :initarg :heightmap
+              :initform (make-array '(0 0) :element-type 'character)
+              :documentation "A 2d array of characters in the range a \(low\) - z \(high\).")))
+
+(defun make-heightmap (lines)
+  (make-array (list (length lines) (length (first lines)))
+              :element-type 'character
+              :initial-contents lines))
+
+(defun height (heightmap position)
+  (aref heightmap (realpart position) (imagpart position)))
+
+(defun inside-map-p (heightmap position)
+  (and (< -1 (realpart position) (array-dimension heightmap 0))
+       (< -1 (imagpart position) (array-dimension heightmap 1))))
+
+(defun height-difference (heightmap position1 position2)
+  (- (char-code (height heightmap position2)) (char-code (height heightmap position1))))
+
+(defun make-problem (lines)
+  (let ((start (character-position #\S lines #\a))
+        (end (character-position #\E lines #\z)))
+    (make-instance 'problem
+                   :start start
+                   :end end
+                   :heightmap (make-heightmap lines))))
+
+(defclass location ()
+  ((this :reader this-position
          :initarg :this
          :initform #c(0 0))
    (cost :reader path-cost
          :initarg :cost
          :initform 0)
-   (heightmap :reader heightmap
-              :initarg :heightmap
-              :initform (make-array '(0 0) :element-type 'character)
-              :allocation :class)))
+   (problem :reader path-problem
+            :initarg :problem
+            :initform (make-instance 'problem))))
 
-(defmethod print-object ((node node) stream)
-  (print-unreadable-object (node stream :type t)
-    (with-slots (heightmap this) node
-      (format stream "~A ~A"
-              (aref heightmap (realpart this) (imagpart this))
-              (path-cost node)))))
+(defmethod print-object ((location location) stream)
+  (print-unreadable-object (location stream :type t)
+    (with-slots (this cost problem) location
+      (format stream "~A ~A" (height (heightmap problem) this) cost))))
 
-(defun read-start-node (stream)
-  (let* ((lines (read-file-lines stream))
-         (start (find-char #\S lines #\a))
-         (end (find-char #\E lines #\z)))
-    (make-instance 'node
-                   :start start
-                   :end end
-                   :this start
-                   :heightmap (make-array (list (length lines) (length (first lines)))
-                                          :element-type 'character
-                                          :initial-contents lines))))
+(defgeneric make-origin (problem)
+  (:method ((problem problem))
+    (make-instance 'location
+                   :this (start-position problem)
+                   :problem problem)))
 
-(defun height (heightmap position)
-  (aref heightmap (realpart position) (imagpart position)))
 
-(defun valid-position-p (heightmap position)
-  (flet ((valid-coordinate-p (coordinate axis-number)
-           (< -1 coordinate (array-dimension heightmap axis-number))))
-    (and (valid-coordinate-p (realpart position) 0)
-         (valid-coordinate-p (imagpart position) 1))))
-
-(defun movement-cost (height1 height2)
-  (- (char-code height2) (char-code height1)))
-
-(defun valid-move-p (heightmap position1 position2)
-  (and (valid-position-p heightmap position2)
-       (>= 1 (movement-cost (height heightmap position1) (height heightmap position2)))))
-
-(defun compute-moves (node)
-  (with-slots (heightmap this) node
-    (remove-if #'(lambda (new)
-                   (not (valid-move-p heightmap this new)))
-               (mapcar #'(lambda (direction)
-                           (+ this direction))
-                       *moves*))))
-
-(defun successors (node)
-  (loop for new-position in (compute-moves node)
-        collect (make-instance 'node
-                               :this new-position
-                               :cost (1+ (path-cost node)))))
-
-(defun reachedp (node reached)
-  (gethash (this-position node) reached))
-
-(defun note-as-reached (node reached)
-  (setf (gethash (this-position node) reached) node))
-
-(defun solutionp (node)
-  (= (this-position node) (end-position node)))
-
-(defun uniform-cost-search (start)
-  "function UNIFORM-COST-SEARCH(problem) returns a solution, or failure
- if problem's initial state is a goal then return empty path to initial state
-
-frontier ← a priority queue ordered by pathCost, with a node for the initial state
-reached ← a table of {state: the best path that reached state}; initially empty
-solution ← failure
-
-while frontier is not empty and top(frontier) is cheaper than solution do
-  parent ← pop(frontier)
-  for child in successors(parent) do
-    s ← child.state
-    if s is not in reached or child is a cheaper path than reached[s] then
-      reached[s] ← child
-      add child to the frontier
-      if child is a goal and is cheaper than solution then
-        solution = child
-return solution
-
-From https://github.com/aimacode/aima-pseudocode/blob/master/md/Uniform-Cost-Search.md."
-  (loop with solution = nil
-        with frontier = (list start)
-        with reached = (make-hash-table)
-
-        initially (setf (gethash (this-position start) reached) start)
+(defgeneric make-destination (direction origin)
+  (:documentation
+   "Return a destination location or NIL if one cannot travel in DIRECTION from ORIGIN.")
+   
+  (:method ((direction number) (origin location))
+    (with-slots (this) origin
+      (with-slots (heightmap) (path-problem origin)
+        (let ((position (+ this direction)))
+          (when (and (inside-map-p heightmap position)
+                     (>= 1 (height-difference heightmap this position)))
+            (make-instance 'location
+                           :this position
+                           :cost (1+ (path-cost origin))
+                           :problem (path-problem origin))))))))
         
-        while frontier
-        while (or (not solution)
-                  (< (path-cost (first frontier)) (path-cost solution)))
 
-        for current = (pop frontier)
-        
-        do (loop for next in (successors current)
-                 for old = (gethash (this-position next) reached)
+(defgeneric successors (location)
+  (:documentation
+   "Return a list of locations one can move to from LOCATION.")
+  
+  (:method ((location location))
+    (remove-if #'null
+               (loop for direction in (problem-actions (path-problem location))
+                     collect (make-destination direction location)))))
 
-                 do (when (or (not old)
-                              (< (path-cost next) (path-cost old)))
-                      (setf (gethash (this-position next) reached) next)
-                      (push next frontier)
-                      (when (and (solutionp next)
-                                 (or (not solution)
-                                     (< (path-cost next) (path-cost solution))))
-                        (setf solution next)))
 
-                 finally (setf frontier (sort frontier #'< :key #'path-cost)))
+(defgeneric (setf visitedp) (location table)
+  (:documentation
+   "Adds LOCATION to TABLE, replacing any existing locations with the same position.")
+  
+  (:method ((location location) (table hash-table))
+    (setf (gethash (this-position location) table) location)))
 
-        finally (return solution)))
-        
+
+(defgeneric visitedp (location table)
+  (:documentation
+   "If TABLE contains a location with the same position as LOCATION then return that location;
+otherwise, return NUL.")
+  
+  (:method ((location location) (table hash-table))
+    (gethash (this-position location) table)))
+
+
+(defgeneric solutionp (location)
+  (:documentation
+   "True if LOCATION is the end position of its path-problem.")
+  
+  (:method ((location location))
+    (= (this-position location) (end-position (path-problem location)))))
+
+
+(defgeneric better-solution-p (location solution)
+  (:documentation
+   "True if SOLUTION is NIL, or if LOCATIONs path-cost is less than SOLUTIONs path-cost.")
+  
+  (:method ((location location) (solution null))
+    t)
+  (:method ((location location) (solution location))
+    (< (path-cost location) (path-cost solution))))
+
+
+(defgeneric uniform-cost-search (problem)
+  (:method ((problem problem))
+    (loop with solution = nil
+          with table = (make-hash-table)
+          with frontier = (list (make-origin problem))
+
+          while (and frontier
+                     (better-solution-p (first frontier) solution))
+
+          for current = (pop frontier)
+          
+          do (loop for next in (successors current)
+                   for old = (visitedp next table)
+
+                   do (when (better-solution-p next old)
+                        (setf (visitedp table) next)
+                        (push next frontier)
+                        (when (and (solutionp next)
+                                   (better-solution-p next solution))
+                          (setf solution next)))
+                   finally (setf frontier (sort frontier #'< :key #'path-cost)))
+
+          finally (return solution))))
 
 (defun fewest-steps? ()
   (with-open-input (stream "day-12")
-    (uniform-cost-search (read-start-node stream))))
+    (uniform-cost-search (make-problem (read-file-lines stream)))))
 
-(defun make-starting-positions (start)
-  (with-slots (heightmap) start
+(defun make-starting-positions (problem)
+  (with-slots (heightmap) problem
     (apply #'append
            (loop for row from 0 below (array-dimension heightmap 0)
                  collect (loop for column from 0 below (array-dimension heightmap 0)
                                when (char= #\a (height heightmap (complex row column)))
-                               collect (make-instance 'node
-                                                      :this (complex row column)))))))
+                               collect (make-instance 'problem
+                                                      :start (complex row column)
+                                                      :end (end-position problem)
+                                                      :heightmap heightmap))))))
 
 (defun fewest-steps-from-any-a? ()
   (with-open-input (stream "day-12")
-    (let ((start (read-start-node stream)))
+    (let ((original (make-problem (read-file-lines stream))))
       (first (sort (remove-if #'null
                               (map 'list
                                    #'uniform-cost-search
-                                   (make-starting-positions start)))
+                                   (make-starting-positions original)))
                    #'<
                    :key #'path-cost)))))
+
