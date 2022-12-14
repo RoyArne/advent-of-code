@@ -19,19 +19,21 @@
                     :external-format :utf-8)
      ,@body))
 
-(defun read-file-lines (stream)
+(defun read-file-lines (stream &key parse-line)
   "Read text lines from STREAM until end of file.
 Returns the lines as a list of strings."
-  (loop for line = (read-line stream nil nil)
+  (loop for line = (read-line stream nil)
         while line
-        collect line))
+        collect (if parse-line
+                    (funcall parse-line line)
+                    line)))
 
-(defmacro with-file-lines ((lines filename) &body body)
+(defmacro with-file-lines ((lines filename &key parse-line) &body body)
   "Evaluates BODY with LINES bound to a list of text lines (strings) read from
 FILENAME in the *INPUT-DIRECTORY*."
   (let ((stream (gensym)))
     `(with-open-input (,stream ,filename)
-       (let ((,lines (read-file-lines ,stream)))
+       (let ((,lines (read-file-lines ,stream :parse-line ,parse-line)))
          ,@body))))
 
 (defun trim-whitespace (line)
