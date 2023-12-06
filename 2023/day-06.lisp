@@ -37,3 +37,10 @@
   (loop for line in input
         collect (parse-integer (apply #'concatenate 'string (rest (split #\Space line))))))
   
+(defun compute-part-1 (input)
+  (let ((in (parse-input-06 input)))
+    (reduce #'* (map 'list #'ways-to-beat-distance (first in) (second in)))))
+
+(defun compute-part-2 (input)
+  (let ((in (parse-input-06-part-2 input)))
+    (ways-to-beat-distance (first in) (second in))))
