@@ -4,6 +4,7 @@
   (:export #:*input-directory*
            #:with-open-input
            #:read-file-lines
+           #:with-stream-lines
            #:with-file-lines
            #:trim-whitespace
            #:split)

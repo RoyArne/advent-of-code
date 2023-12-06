@@ -4,7 +4,7 @@
 (defsystem "advent-of-code"
   :name "Advent of Code"
   :version "0.0.1"
-  :depends-on ("cl-ppcre" "split-sequence")
+  :depends-on ("cl-ppcre" "split-sequence" "local-time")
   :serial t
   :components
   ((:file "advent-of-code")
