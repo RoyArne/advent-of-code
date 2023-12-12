@@ -124,3 +124,18 @@ removed from both ends."
 
 (defun parse-numbers (list)
   (map 'list #'parse-integer list))
+
+(defun list-numbers (string)
+  (map 'list #'parse-integer (split #\Space string)))
+
+(defun flatten (l)
+  (when l
+    (if (atom l)
+        (list l)
+        (loop for a in l appending (flatten a)))))
+
+(defun duplicates (list &optional (test #'eql))
+  (when list
+    (if (member (car list) (cdr list) :test test)
+        (cons (car list) (duplicates (cdr list)))
+        (duplicates (cdr list)))))
