@@ -61,6 +61,35 @@ applied to each line in order, and a list of the results is returned."
                                         :parse-line ,parse-line)))
      ,@body))
 
+(defmacro with-input-file-grid ((grid &key day-number year-number parse-line) &body body)
+  "Return a 2d array of characters from the input file. Assumes that every
+line is equally long. Access characters with \(aref grid column row\)."
+  (let ((column (gensym))
+        (row (gensym))
+        (char (gensym))
+        (line (gensym))
+        (lines (gensym)))
+    `(with-input-file-lines (,lines
+                             :day-number ,day-number :year-number ,year-number
+                             :parse-line ,parse-line)
+       (let ((,grid (make-array (list (length (first ,lines))  (length ,lines))
+                                :element-type 'character)))
+         (loop for ,line in ,lines
+               for ,row = 0 then (1+ ,row)
+               do (loop for ,char across ,line
+                        for ,column = 0 then (1+ ,column)
+                        do (setf (aref ,grid ,column ,row) ,char)))
+         ,@body))))
+
+(defun row-dimension (grid)
+  (array-dimension grid 1))
+
+(defun column-dimension (grid)
+  (array-dimension grid 0))
+
+(defun grid (grid column row)
+  (aref grid column row))
+
 
 (defparameter *year* "2022")
 
