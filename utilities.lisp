@@ -84,11 +84,23 @@ line is equally long. Access characters with \(aref grid column row\)."
 (defun row-dimension (grid)
   (array-dimension grid 1))
 
+(defun row (position)
+  (imagpart position))
+
 (defun column-dimension (grid)
   (array-dimension grid 0))
 
-(defun grid (grid column row)
-  (aref grid column row))
+(defun column (position)
+  (realpart position))
+
+(defun in-grid-p (grid position)
+  (array-in-bounds-p grid (column position) (row position)))
+
+(defun grid (grid position)
+  (aref grid (column position) (row position)))
+
+(defun (setf grid) (character grid position)
+  (setf (aref grid (column position) (row position)) character))
 
 
 (defparameter *year* "2022")
